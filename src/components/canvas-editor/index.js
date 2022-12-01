@@ -76,13 +76,15 @@ const CanvasEditor = () =>{
     const objectMoving=(e)=>{
         const obj = e.target;
         updateArrowObject(obj, "moving")
-        if (obj.name === "arrow_line"){
+        if (obj.name === "arrow_line" || obj.name === "square1" || obj.name === "square2"){
+            const lineObj = canvas.getObjects().find(o=>o.name === "arrow_line" && o.ref_id === obj.ref_id)
             const qMark = canvas.getObjects().find(o=>o.name === "question-mark" && o.ref_id === obj.ref_id )
-            if (qMark){
-                const {x1,y1,x2,y2} = obj.custom.linePoints;
+            if (qMark && lineObj){
+                const {x,y} = lineObj.getCenterPoint();
                 qMark.set({
-                    left:(x1 + x2) / 2,
-                    top:(y1 + y2) / 2
+                    left:x,
+                    top:y,
+                    angle:lineObj.angle
                 })
                 qMark.setCoords();
             }
@@ -403,7 +405,6 @@ const CanvasEditor = () =>{
             isAddingMode:true,
             ref_id: id,
         });
-
         canvas.add(group)
         canvas.renderAll();
     }
@@ -436,7 +437,6 @@ const CanvasEditor = () =>{
             left: props.left,
             top: props.top,
             name: "arrow_line",
-            isAddingMode:true,
             // perPixelTargetFind: true,
             objecttype: "arrow_line",
             custom:{
