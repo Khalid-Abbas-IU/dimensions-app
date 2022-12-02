@@ -1,50 +1,45 @@
 import {fabric} from 'fabric';
 
-export const setArrowAlignment = (x2, y2, tempVal) => {
+export const setArrowAlignment = (x, y, tempVal) => {
     if (tempVal === -1.57) {
         // 90 degrees
-        x2 = x2 - 2
+        x = x - 2
     }
     else if (-1.57 < tempVal && tempVal < 0) {
         // between 0 and 90 degrees
-        x2 = x2 - 1.75;
-        y2 = y2 - 2;
+        x = x - 1.75;
+        y = y - 2;
     }
     else if (tempVal < -1.57) {
         // between 90 and 180 degrees
-        y2 = y2 + 2;
-        x2 = x2 - 1.75;
+        y = y + 2;
+        x = x - 1.75;
     }
     else if (tempVal <= 3.14 && tempVal > 1.57) {
         // between 180 and 270 degrees
-        x2 = x2 + 1.75;
-        y2 = y2 + 2;
+        x = x + 1.75;
+        y = y + 2;
     }
     else if (tempVal === 1.57) {
         // 360 degrees
-        x2 = x2 + 2;
+        x = x + 2;
     }
     else {
-        x2 = x2 + 2;
-        y2 = y2 - 2;
+        x = x + 2;
+        y = y - 2;
     }
 
     return {
-        x2, y2
+        x, y
     }
 }
 
 export const moveEnd = (obj, is_set,canvas) => {
-
-    var p = obj,
-        x1, y1, x2, y2;
-
+    var x1, y1, x2, y2;
     if (obj.pointType === 'arrow_end') {
-
         obj.line.set('x2', obj.get('left'));
         obj.line.set('y2', obj.get('top'));
     } else {
-
         obj.line.set('x1', obj.get('left'));
         obj.line.set('y1', obj.get('top'));
     }
@@ -55,15 +50,10 @@ export const moveEnd = (obj, is_set,canvas) => {
     y2 = obj.line.get('y2');
 
     var angle = calcArrowAngle(x1, y1, x2, y2);
-
     if (obj.pointType === 'arrow_end') {
-        if (obj.arrow) {
-            obj.arrow.set('angle', angle - 90);
-        }
-    } else {
-        obj.set('angle', angle - 90);
-    }
-
+        if (obj.arrow) obj.arrow.set('angle', angle - 90);
+        if (obj.arrow1) obj.arrow1.set('angle', angle + 90);
+    } else obj.set('angle', angle - 90);
     obj.line.setCoords();
     if (is_set) {
         obj.square2.set('left', obj.get("left"));
@@ -72,33 +62,19 @@ export const moveEnd = (obj, is_set,canvas) => {
     }
     else {
         if (obj.arrow) {
-
             obj.arrow.set('left', obj.get("left"));
             obj.arrow.set('top', obj.get('top'));
         }
         obj.line._setWidthHeight();
-        x1 = obj.line.get('x1');
-        y1 = obj.line.get('y1');
-        x2 = obj.line.get('x2');
-        y2 = obj.line.get('y2');
-        if (obj.arrow) {
-            obj.arrow.set('angle', angle - 90);
-        }
-
-        angle = calcArrowAngle(x1, y1, x2, y2);
-
-        if (obj.arrow) {
-            obj.arrow.setCoords();
-        }
+        if (obj.arrow) obj.arrow.set('angle', angle - 90);
+        if (obj.arrow1) obj.arrow1.set('angle', angle + 90);
+        if (obj.arrow) obj.arrow.setCoords();
+        if (obj.arrow1) obj.arrow1.setCoords();
     }
-
     canvas.renderAll();
-
 }
 export const moveEnd2 = (obj,canvas) => {
-    var p = obj,
-        x1, y1, x2, y2;
-
+    let x1, y1, x2, y2;
     if (obj.pointType === 'arrow_end') {
         obj.line.set('x2', obj.get('left'));
         obj.line.set('y2', obj.get('top'));
@@ -106,45 +82,34 @@ export const moveEnd2 = (obj,canvas) => {
         obj.line.set('x1', obj.get('left'));
         obj.line.set('y1', obj.get('top'));
     }
-
     obj.line._setWidthHeight();
-
     x1 = obj.line.get('x1');
     y1 = obj.line.get('y1');
     x2 = obj.line.get('x2');
     y2 = obj.line.get('y2');
-
     var angle = calcArrowAngle(x1, y1, x2, y2);
-
     if (obj.pointType === 'arrow_end') {
-        if (obj.arrow) {
-            obj.arrow.set('angle', angle - 90);
-        }
-    } else {
-        obj.set('angle', angle - 90);
-    }
+        if (obj.arrow) obj.arrow.set('angle', angle - 90);
+        if (obj.arrow1) obj.arrow1.set('angle', angle + 90);
+    } else obj.set('angle', angle - 90);
     obj.line.setCoords();
-
-    if (obj.arrow) {
-        obj.arrow.setCoords();
+    if (obj.arrow1) {
+        obj.arrow1.set('left', obj.get("left"));
+        obj.arrow1.set('top', obj.get('top'));
     }
+    obj.line._setWidthHeight();
+    obj.arrow && obj.arrow.setCoords();
+    obj.arrow && obj.arrow1.setCoords();
     canvas.renderAll();
 }
 export const calcArrowAngle = (x1, y1, x2, y2) => {
-    var angle = 0,
-        x, y;
-
+    var angle = 0, x, y;
     x = (x2 - x1);
     y = (y2 - y1);
-
     if (x === 0) {
         angle = (y === 0) ? 0 : (y > 0) ? Math.PI / 2 : Math.PI * 3 / 2;
-    } else if (y === 0) {
-        angle = (x > 0) ? 0 : Math.PI;
-    } else {
-        angle = (x < 0) ? Math.atan(y / x) + Math.PI : (y < 0) ? Math.atan(y / x) + (2 * Math.PI) : Math.atan(y / x);
-    }
-
+    } else if (y === 0) angle = (x > 0) ? 0 : Math.PI;
+    else angle = (x < 0) ? Math.atan(y / x) + Math.PI : (y < 0) ? Math.atan(y / x) + (2 * Math.PI) : Math.atan(y / x);
     return (angle * 180 / Math.PI);
 }
 export const moveLine = (line, type) => {
@@ -156,6 +121,12 @@ export const moveLine = (line, type) => {
         line.arrow.set({
             'left': line.x1 + deltaX,
             'top': line.y1 + deltaY
+        }).setCoords();
+    }
+    if (line.arrow1) {
+        line.arrow1.set({
+            'left': line.x2 + deltaX,
+            'top': line.y2 + deltaY
         }).setCoords();
     }
 

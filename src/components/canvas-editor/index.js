@@ -1,19 +1,29 @@
-import React, {useEffect, useState} from "react";
+import React, {useEffect, useRef, useState} from "react";
 import {fabric} from 'fabric';
 import '../fabric-overrids'
 import './index.css'
-import {calcArrowAngle, moveEnd, moveEnd2, moveLine, setArrowAlignment, transformedPoint} from "../utils";
-
+import {calcArrowAngle, moveEnd, moveEnd2, moveLine, setArrowAlignment} from "../utils";
 import questionMarkIcon from "../../assets/question-mark.png"
+import uploadImg from "../../assets/Upload-img.png"
+import questionMarkIcon1 from "../../assets/question-mark-icon.png"
 import ColorsPanel from "./colorsPanel";
-let canvas, colors=['red','green', 'blue', 'purple'],selectedShapeType = '',isAddingShape = false,
-    initialPointers = {}, selectedQMarkRefId = "", tempDimensionText = "";
+import DimChangePopup from "./DimensionChangePopup/DimChangePopup";
+import ZoomInBox from "./ZoomInBox/ZoomInBox";
+let canvas,selectedShapeType = '',isAddingShape = false,
+    initialPointers = {}, selectedQMarkRefId = "";
 const CanvasEditor = () =>{
 
     // Declare and initialize component states.
     const [isImageLoaded, setIsImageLoaded] = useState(false)
     const [dimensionInputText, setDimensionInputText] = useState("")
     const [openDimensionPopup, setOpenDimensionPopup] = useState(false)
+    const [drawBtnActive, setDrawBtnActive] = useState("")
+    const [selectedDimension, setSelectedDimension] = useState("cm")
+    const [showDropDownList, setShowDropDownList] = useState(false)
+    const [zoomAreaImgSrc, setZoomAreaImgSrc] = useState("")
+
+    const uploadImgInput = useRef();
+
 
     useEffect(() => {
         // Initialize canvas and set dimension.
@@ -103,14 +113,16 @@ const CanvasEditor = () =>{
         const actObj = e.selected[0];
         if (!actObj) return;
         updateArrowObject(actObj, "selected");
-        enableDimensionPopup(actObj)
     }
 
     const enableDimensionPopup =(actObj)=>{
+        if (!actObj) return;
         if (actObj.name === "question-mark" || actObj.name === "dimension-text"){
             selectedQMarkRefId = actObj.ref_id
             if (actObj.name === "dimension-text"){
-                setDimensionInputText(actObj.text)
+                let t = actObj.text
+                const newT = t ? t.slice(0, -3) : t;
+                setDimensionInputText(newT)
             }
             setOpenDimensionPopup(true)
         }
@@ -157,7 +169,6 @@ const CanvasEditor = () =>{
         const activeObject = e.selected[0];
         if (!activeObject) return;
         updateArrowObject(activeObject, "selected")
-        // enableDimensionPopup(activeObject)
     }
     const cleared=()=>{
         clearSelection()
@@ -187,16 +198,24 @@ const CanvasEditor = () =>{
             if (activeObject.arrow) {
                 activeObject.arrow.set({ fill: color })
             }
+            if (activeObject.arrow1) {
+                activeObject.arrow1.set({ fill: color })
+            }
         }
         if (activeObject.name === 'square1' || activeObject.name === 'square2') {
             activeObject.line.set({ stroke: color })
             if (activeObject.arrow) {
                 activeObject.arrow.set({ fill: color })
             }
+            if (activeObject.arrow1) {
+                activeObject.arrow1.set({ fill: color })
+            }
         }
         canvas.renderAll();
     }
-    const mouseUp =()=>{
+    const mouseUp =(e)=>{
+        const o = e.target;
+        enableDimensionPopup(o)
         if (isAddingShape){
             const objs = canvas.getObjects();
             const lineGroupInd = objs.findIndex(o=>o.isAddingMode);
@@ -219,11 +238,11 @@ const CanvasEditor = () =>{
                     angle:arrow.angle,
                     scaleProps:{
                         fontWeight:500,
-                        height:40.68,
+                        height:40,
                         lineHeight:81.36,
                         lineSelectorHeight:30.51,
                         strokeWidth:6,
-                        width:56.5,
+                        width:56,
                         top:407
                     }})
                 canvas.remove(lineGroup)
@@ -232,6 +251,7 @@ const CanvasEditor = () =>{
         isAddingShape = false
         initialPointers = {}
         selectedShapeType = ''
+        setDrawBtnActive("")
         const obj = canvas.getActiveObject();
         if (obj) updateArrowObject(obj, "selected")
     }
@@ -257,7 +277,7 @@ const CanvasEditor = () =>{
             canvas.setActiveObject(imgInstance);
             canvas.renderAll();
         };
-        img.src = questionMarkIcon;
+        img.src = questionMarkIcon1;
     }
     const mouseDown =(e)=>{
         if (!selectedShapeType) return;
@@ -269,6 +289,7 @@ const CanvasEditor = () =>{
         }
     }
     const mouseMove =(e)=>{
+        const obj = e.target;
         if (isAddingShape){
             const actObj = canvas.getObjects().find(o=>o.name === selectedShapeType && o.isAddingMode);
             if (actObj){
@@ -282,6 +303,16 @@ const CanvasEditor = () =>{
                 canvas.renderAll();
             }
         }
+        if (!obj) return;
+        if (obj.name === "square1" || obj.name === "square2"){
+            setZoomAreaImgSrc(canvas.toDataURL({
+                left: obj.left - obj.width,
+                top: obj.top - obj.height,
+                width: obj.width * 2,
+                height: obj.height  * 2
+            }));
+        }
+
     }
 
 
@@ -299,10 +330,9 @@ const CanvasEditor = () =>{
         let y2 = newY2;
         var angle = Math.atan2(y2 - y1, x2 - x1);
         let tempVal = Number.parseFloat(angle).toFixed(2);
-
         var line = new fabric.Line([x1, y1, x2, y2], {
             stroke: 'black',
-            strokeWidth: 3,
+            strokeWidth: 6,
             originX:'center',
             originY:'center',
             name: "arrow_line",
@@ -312,21 +342,32 @@ const CanvasEditor = () =>{
         });
 
 
-        x2 = setArrowAlignment(x2, y2, tempVal).x2;
-        y2 = setArrowAlignment(x2, y2, tempVal).y2;
-
+        x2 = setArrowAlignment(x2, y2, tempVal).x;
+        y2 = setArrowAlignment(x2, y2, tempVal).y;
+        const calcAngle = (angle * (180 / (3.142))) - 30;
         var arrow = new fabric.Triangle({
             left: x2,
             top: y2,
-            angle: (angle * (180 / (3.142))) - 30,
-            width: 15,
-            height: 15,
+            angle: calcAngle,
+            width: 18,
+            height: 18,
             originX:'center',
             originY:'center',
             fill: 'black',
             name: "arrow",
         });
-        const group = new fabric.Group([line,arrow], {
+        var arrow1 = new fabric.Triangle({
+            left: x1,
+            top: y1,
+            angle: calcAngle + 55,
+            width: 18,
+            height: 18,
+            originX:'center',
+            originY:'center',
+            fill: 'black',
+            name: "arrow1",
+        });
+        const group = new fabric.Group([line,arrow,arrow1], {
             name: "arrowLine",
             originX:'center',
             originY:'center',
@@ -382,6 +423,27 @@ const CanvasEditor = () =>{
 
 
         var arrow = new fabric.Triangle({
+            left: line.get('x1') + deltaX,
+            top: line.get('y1') + deltaY,
+            originX: 'center',
+            originY: 'center',
+            hasBorders: false,
+            hasControls: false,
+            lockScalingX: true,
+            lockScalingY: true,
+            lockRotation: true,
+            selectable: false,
+            pointType: 'arrow_start',
+            angle: props.angle,
+            width: (props.scaleProps.height / 2) - 2,
+            height: (props.scaleProps.height / 2) - 2,
+            fill: props.color,
+            objecttype: "arrow_line",
+            name: "arrow",
+        });
+        arrow.line = line;
+
+        var arrow1 = new fabric.Triangle({
             left: line.get('x2') + deltaX,
             top: line.get('y2') + deltaY,
             originX: 'center',
@@ -400,7 +462,7 @@ const CanvasEditor = () =>{
             objecttype: "arrow_line",
             name: "arrow",
         });
-        arrow.line = line;
+        arrow1.line = line;
         var square1 = new fabric.Circle({
             left: line.get('x2') + deltaX,
             top: line.get('y2') + deltaY,
@@ -448,11 +510,14 @@ const CanvasEditor = () =>{
         });
         setObjectPadding(square2, 5, 2)
         square2.line = line;
-        line.ref_id = arrow.ref_id = square1.ref_id = square2.ref_id = id
+        line.ref_id = arrow.ref_id = arrow1.ref_id = square1.ref_id = square2.ref_id = id
         line.square1 = arrow.square1 = square2.square1 = square1;
         line.square2 = arrow.square2 = square1.square2 = square2;
+        arrow1.square1 = square1
+        arrow1.square2 = square2
         line.arrow = square1.arrow = square2.arrow = arrow;
-        canvas.add(line, arrow, square1, square2);
+        line.arrow1 = square1.arrow1 = square2.arrow1 = arrow1;
+        canvas.add(line, arrow ,arrow1, square1, square2);
         moveLine(line,canvas)
         moveEnd2(square1,canvas)
         var angle = calcArrowAngle(line.x1, line.y1, line.x2, line.y2);
@@ -462,7 +527,10 @@ const CanvasEditor = () =>{
     }
 
 
-    const addShapeOnCanvas =(type)=>selectedShapeType = type;
+    const addShapeOnCanvas =(type)=>{
+        selectedShapeType = type;
+        setDrawBtnActive("drawBtnActive")
+    }
     const handleUploadImage =(e)=>{
         const file = e.target.files[0]
         loadImageIntoCanvas(file)
@@ -472,8 +540,13 @@ const CanvasEditor = () =>{
         const val = e.target.value;
         setDimensionInputText(val)
     }
-    const updateDimensionText =()=>{
-        const val = dimensionInputText;
+    const updateDimensionText =(e,isCancel=false)=>{
+        if (isCancel){
+            setOpenDimensionPopup(false)
+            setDimensionInputText("")
+            return;
+        }
+        const val = `${dimensionInputText} ${selectedDimension}`;
         const refID = selectedQMarkRefId;
         const objs = canvas.getObjects();
         const line = objs.find(o=>o.name === "arrow_line" && o.ref_id === refID)
@@ -544,31 +617,49 @@ const CanvasEditor = () =>{
             canvas.add(imgInstance);
             canvas.setActiveObject(imgInstance);
             canvas.renderAll();
+            setZoomAreaImgSrc(canvas.toDataURL({
+                left: imgInstance.left - (imgInstance.width/2),
+                top: imgInstance.top - (imgInstance.height/2),
+                width: 300,
+                height: 300
+            }));
             setIsImageLoaded(true)
         };
         img.src = src;
     };
 
+    const changeDimensionSymbol=(dim)=>{
+        setSelectedDimension(dim)
+        setShowDropDownList(false)
+    }
+    const enableUploadHandler=(e)=>{
+        uploadImgInput.current.click();
+    }
+
     return (
         <div className="editor-main-wrapper">
-            <div className="canvas-main-wrapper">
-                <canvas id="canvas"/>
-            </div>
-            <div className="zoomin-arrow"/>
-            <ColorsPanel colors={colors} handleChangeColor={handleChangeColor}/>
-            <button className="drawBtn" onClick={()=>addShapeOnCanvas("arrowLine")}>Draw Arrow</button>
+            <div className="canvas-main-wrapper"><canvas id="canvas"/></div>
+            <ZoomInBox imageData={zoomAreaImgSrc || questionMarkIcon}/>
+            <ColorsPanel handleChangeColor={handleChangeColor}/>
+            <button className={`drawBtn ${drawBtnActive}`} onClick={()=>addShapeOnCanvas("arrowLine")}>DRAW ARROW</button>
             {
-                !isImageLoaded && <div className="upload-img-popup content-center">
-                    <span>UPLOAD IMAGE</span>
-                    <input id="image-upload" type="file" onChange={handleUploadImage}/>
+                !isImageLoaded && <div className="upload-img-popup content-center" onClick={enableUploadHandler}>
+                    <div className="upload-inner-wrapper">
+                        <img className="upload-img" src={uploadImg} alt="uploadImg"/>
+                        <span className="uploadImgText">UPLOAD IMAGE</span>
+                        <input ref={uploadImgInput} className="d-none" id="image-upload" type="file" onChange={handleUploadImage}/>
+                    </div>
+
+
                 </div>
             }
-            {openDimensionPopup &&
-                <div className="dimension-change-pop content-center">
-                    <span>CHANGE DIMENSION</span>
-                    <input type="text" value={dimensionInputText} onChange={handleChangeDimension}/>
-                    <button onClick={updateDimensionText}>ADD</button>
-                </div>
+            {openDimensionPopup && <DimChangePopup updateDimensionText={updateDimensionText}
+                                                    changeDimensionSymbol={changeDimensionSymbol}
+                                                    dimensionInputText={dimensionInputText}
+                                                    handleChangeDimension={handleChangeDimension}
+                                                    selectedDimension={selectedDimension}
+                                                    setShowDropDownList={setShowDropDownList}
+                                                    showDropDownList={showDropDownList}/>
             }
         </div>
     );
