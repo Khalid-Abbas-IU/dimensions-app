@@ -616,9 +616,19 @@ const CanvasEditor = () =>{
             <ColorsPanel colors={colors} handleChangeColor={handleChangeColor}/>
             <button className="drawBtn" onClick={()=>addShapeOnCanvas("arrowLine")}>Draw Arrow</button>
             {
-                !isImageLoaded && <div className="upload-img-popup content-center">
-                    <span>UPLOAD IMAGE</span>
-                    <input id="image-upload" type="file" onChange={handleUploadImage}/>
+                !isImageLoaded && 
+                // <div className="upload-img-popup content-center">
+                //     <span>UPLOAD IMAGE</span>
+                //     <input id="image-upload" type="file" onChange={handleUploadImage}/>
+                // </div>
+                <div className="upload-image-container upload-img-popup">
+                    <label className="upload-label">
+                    <div>
+                        <img src="/images/upload.png" alt="Upload Image" width="150px" />
+                    </div>
+                    Upload Image
+                    <input type="file" id="image-upload"  accept="image/*" onChange={handleUploadImage} />
+                    </label>
                 </div>
             }
         </div>
