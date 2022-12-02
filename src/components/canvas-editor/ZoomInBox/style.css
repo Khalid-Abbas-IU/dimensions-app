@@ -1,0 +1,14 @@
+.zoomIn-box-img{
+    height: 100%;
+    width: 100%;
+}
+
+.zoomIn-box-wrapper{
+    position: absolute;
+    left: 10px;
+    top: 10px;
+    /*z-index: 999;*/
+    height: 300px;
+    width: 300px;
+    background: #a39b9b;
+}

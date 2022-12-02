@@ -1,16 +1,29 @@
-import React, {useEffect, useState} from "react";
+import React, {useEffect, useRef, useState} from "react";
 import {fabric} from 'fabric';
 import '../fabric-overrids'
 import './index.css'
-import {moveEnd, moveEnd2, moveLine, setArrowAlignment, transformedPoint} from "../utils";
-
+import {calcArrowAngle, moveEnd, moveEnd2, moveLine, setArrowAlignment} from "../utils";
 import questionMarkIcon from "../../assets/question-mark.png"
+import uploadImg from "../../assets/Upload-img.png"
+import questionMarkIcon1 from "../../assets/question-mark-icon.png"
 import ColorsPanel from "./colorsPanel";
-let canvas, colors=['red','green', 'blue', 'purple'],selectedShapeType = '',isAddingShape = false, initialPointers = {};
+import DimChangePopup from "./DimensionChangePopup/DimChangePopup";
+import ZoomInBox from "./ZoomInBox/ZoomInBox";
+let canvas,selectedShapeType = '',isAddingShape = false,
+    initialPointers = {}, selectedQMarkRefId = "";
 const CanvasEditor = () =>{
 
     // Declare and initialize component states.
-    const [isImageLoaded, setIsImageLoaded] = useState(false) // has one yard value
+    const [isImageLoaded, setIsImageLoaded] = useState(false)
+    const [dimensionInputText, setDimensionInputText] = useState("")
+    const [openDimensionPopup, setOpenDimensionPopup] = useState(false)
+    const [drawBtnActive, setDrawBtnActive] = useState("")
+    const [selectedDimension, setSelectedDimension] = useState("cm")
+    const [showDropDownList, setShowDropDownList] = useState(false)
+    const [zoomAreaImgSrc, setZoomAreaImgSrc] = useState("")
+
+    const uploadImgInput = useRef();
+
 
     useEffect(() => {
         // Initialize canvas and set dimension.
@@ -21,6 +34,7 @@ const CanvasEditor = () =>{
         // Initialize fabric canvas
         canvas = new fabric.Canvas('canvas',{
             allowTouchScrolling: true,
+            preserveObjectStacking:true,
             backgroundColor:'white',
             selection: false,
         })
@@ -76,13 +90,18 @@ const CanvasEditor = () =>{
     const objectMoving=(e)=>{
         const obj = e.target;
         updateArrowObject(obj, "moving")
-        if (obj.name === "arrow_line"){
-            const qMark = canvas.getObjects().find(o=>o.name === "question-mark" && o.ref_id === obj.ref_id )
-            if (qMark){
-                const {x1,y1,x2,y2} = obj.custom.linePoints;
+        if (obj.name === "arrow_line" || obj.name === "square1" || obj.name === "square2"){
+            const objs = canvas.getObjects();
+            const line = objs.find(o=>o.name === "arrow_line" && o.ref_id === obj.ref_id)
+            const qMark = objs.find(o=>(o.name === "question-mark" || o.name === "dimension-text") && o.ref_id === obj.ref_id )
+            if (qMark && line){
+                const {x,y} = line.getCenterPoint(),
+                    {x1,y1,x2,y2} = line,
+                    angle = calcArrowAngle(x1, y1, x2, y2);
                 qMark.set({
-                    left:(x1 + x2) / 2,
-                    top:(y1 + y2) / 2
+                    left:x,
+                    top:y,
+                    angle
                 })
                 qMark.setCoords();
             }
@@ -90,52 +109,38 @@ const CanvasEditor = () =>{
         }
     }
     const objectScaled=()=>{}
-    const selectionCreated=()=>{
-        const actObj = canvas.getActiveObject();
+    const selectionCreated=(e)=>{
+        const actObj = e.selected[0];
         if (!actObj) return;
         updateArrowObject(actObj, "selected");
     }
 
-    const updateArrowObject = (obj, state, multiSelection = false) => {
+    const enableDimensionPopup =(actObj)=>{
+        if (!actObj) return;
+        if (actObj.name === "question-mark" || actObj.name === "dimension-text"){
+            selectedQMarkRefId = actObj.ref_id
+            if (actObj.name === "dimension-text"){
+                let t = actObj.text
+                const newT = t ? t.slice(0, -3) : t;
+                setDimensionInputText(newT)
+            }
+            setOpenDimensionPopup(true)
+        }
+    }
+
+    const updateArrowObject = (obj, state) => {
         switch (state) {
             case "selected":
                 switch (obj.name) {
                     case "arrow_line":
-                        if (multiSelection) break;
                         obj.square1.opacity = .5
                         obj.square2.opacity = .5
                         obj.square1.selectable = true
                         obj.square2.selectable = true
                         obj.square1.hoverCursor = obj.square2.hoverCursor = "pointer"
-                        break;
-                    case "line":
-                        if (multiSelection) {
-                            if (obj.pa) {
-                                obj.pa.opacity = 1
-                                obj.pa.selectable = false
-                                obj.pa.hoverCursor = "pointer"
-                            }
-                            break;
-                        }
-                        const middlePointActInd = canvas._objects.findIndex((o) => o.ref_id.includes(obj.ref_id) && o.name === "pX");
-                        const lineInd = canvas._objects.findIndex((o) => (o.name === "shadow-line" || o.name === "line") && o.ref_id.includes(obj.ref_id));
-                        if (middlePointActInd > -1 && lineInd > -1) {
-                            canvas._objects[middlePointActInd].opacity = .5;
-                            canvas._objects[middlePointActInd].selectable = true;
-                            canvas._objects[middlePointActInd].hoverCursor = "pointer"
-                            canvas._objects[middlePointActInd].bringForward()
-                            canvas._objects[lineInd].sendToBack();
-                        }
-                        obj.p0.opacity = obj.p2.opacity = .5
-                        obj.p0.selectable = obj.p2.selectable = true
-                        obj.p0.hoverCursor = obj.p2.hoverCursor = "pointer"
-                        if (obj.pa) {
-                            obj.pa.opacity = 1
-                            obj.pa.selectable = false
-                            obj.pa.hoverCursor = "pointer"
-                        }
-                        break;
-                    case "shadow-line":
+                        const qMarkInd = canvas._objects.findIndex((o) => o.ref_id === obj.ref_id && (o.name === "question-mark" || o.name === "dimension-text"));
+                        if (qMarkInd > -1) canvas.bringToFront(canvas._objects[qMarkInd])
+                        canvas.renderAll();
                         break;
                 }
                 break;
@@ -149,77 +154,10 @@ const CanvasEditor = () =>{
                         moveLine(obj)
                         break;
                     case "square1":
-
                         moveEnd2(obj,canvas)
                         break;
                     case "square2":
                         moveEnd(obj,"",canvas)
-                        break;
-                    case "pa":
-                        break;
-                    case "p0":
-                    case "p2":
-                        var p1 = obj.p1
-                        p1.opacity = 0
-                        p1.selectable = false
-
-                        if (obj.line1) {
-                            obj.line1.path[0][1] = obj.left;
-                            obj.line1.path[0][2] = obj.top;
-                        } else if (obj.line3) {
-                            obj.line3.path[1][3] = obj.left;
-                            obj.line3.path[1][4] = obj.top;
-                        }
-
-                        break;
-                    case "p1":
-                        if (obj.ref_id.includes('shadow')) {
-                            obj.line2.path[1][1] = obj.left;
-                            obj.line2.path[1][2] = obj.top;
-                            break;
-                        }
-                        obj.p1 = {
-                            ...obj.p1,
-                            opacity: 1,
-                            hoverCursor: "pointer",
-                        }
-                        if (obj.pa) {
-                            obj.pa.opacity = 1
-                            obj.pa.selectable = false
-                            obj.pa.hoverCursor = "pointer"
-                        }
-                        if (obj.line2) {
-                            obj.line2.path[1][1] = obj.left;
-                            obj.line2.path[1][2] = obj.top;
-                        }
-                        break;
-                    case "line":
-                        const middlePointActInd = canvas._objects.findIndex((o) => o.ref_id.includes(obj.ref_id) && o.name === "pX");
-                        if (middlePointActInd > -1) {
-                            canvas._objects[middlePointActInd].opacity = 0;
-                            canvas._objects[middlePointActInd].selectable = false;
-                        }
-                        obj.p0.opacity = obj.p1.opacity = obj.p2.opacity = 0
-                        obj.p0.selectable = obj.p1.selectable = obj.p2.selectable = false
-                        if (obj.pa) {
-                            obj.pa.opacity = 0
-                            obj.pa.selectable = true
-                        }
-                        var transformedPoints = transformedPoint(obj);
-                        obj.p0.left = transformedPoints[0].x;
-                        obj.p0.top = transformedPoints[0].y;
-                        obj.p2.left = transformedPoints[1].x;
-                        obj.p2.top = transformedPoints[1].y;
-                        obj.p1.left = transformedPoints[2].x;
-                        obj.p1.top = transformedPoints[2].y;
-                        if (obj.pa) {
-                            obj.pa.left = transformedPoints[0].x;
-                            obj.pa.top = transformedPoints[0].y;
-                        }
-                        break;
-                    case "shadow-line":
-                        break;
-                    case "player":
                         break;
                 }
                 break;
@@ -227,13 +165,14 @@ const CanvasEditor = () =>{
         canvas.renderAll()
     }
 
-    const selectionUpdated=()=>{
-        const activeObject = canvas.getActiveObject();
+    const selectionUpdated=(e)=>{
+        const activeObject = e.selected[0];
         if (!activeObject) return;
         updateArrowObject(activeObject, "selected")
     }
     const cleared=()=>{
         clearSelection()
+        setOpenDimensionPopup(false)
 
     }
     const clearSelection = () => {
@@ -254,9 +193,13 @@ const CanvasEditor = () =>{
         const activeObject = canvas.getActiveObject();
         if (!activeObject) return;
         if (activeObject.name === 'arrow_line') {
+            // const text = canvas.getObjects().find(o=>o.name === "dimension-text" && o.ref_id === refID)
             activeObject.set({ stroke: color })
             if (activeObject.arrow) {
                 activeObject.arrow.set({ fill: color })
+            }
+            if (activeObject.arrow1) {
+                activeObject.arrow1.set({ fill: color })
             }
         }
         if (activeObject.name === 'square1' || activeObject.name === 'square2') {
@@ -264,10 +207,15 @@ const CanvasEditor = () =>{
             if (activeObject.arrow) {
                 activeObject.arrow.set({ fill: color })
             }
+            if (activeObject.arrow1) {
+                activeObject.arrow1.set({ fill: color })
+            }
         }
         canvas.renderAll();
     }
-    const mouseUp =()=>{
+    const mouseUp =(e)=>{
+        const o = e.target;
+        enableDimensionPopup(o)
         if (isAddingShape){
             const objs = canvas.getObjects();
             const lineGroupInd = objs.findIndex(o=>o.isAddingMode);
@@ -281,7 +229,6 @@ const CanvasEditor = () =>{
                 lineGroup.evented = true;
                 const uuid = require("uuid");
                 const id = uuid.v4();
-                addQuestionMark((line.x1 + line.x2) / 2,(line.y1 + line.y2) / 2,arrow.angle,id)
                 addArrow({
                     color:"#33333",
                     is_dashed:false,
@@ -291,11 +238,11 @@ const CanvasEditor = () =>{
                     angle:arrow.angle,
                     scaleProps:{
                         fontWeight:500,
-                        height:40.68,
+                        height:40,
                         lineHeight:81.36,
                         lineSelectorHeight:30.51,
                         strokeWidth:6,
-                        width:56.5,
+                        width:56,
                         top:407
                     }})
                 canvas.remove(lineGroup)
@@ -304,10 +251,11 @@ const CanvasEditor = () =>{
         isAddingShape = false
         initialPointers = {}
         selectedShapeType = ''
+        setDrawBtnActive("")
         const obj = canvas.getActiveObject();
         if (obj) updateArrowObject(obj, "selected")
     }
-    const addQuestionMark =(left,top,angle,refId)=> {
+    const addQuestionMark =({x:left,y:top},angle,refId)=> {
         let img = new Image();
         img.crossOrigin = "Anonymous";
         img.onload = function () {
@@ -317,17 +265,19 @@ const CanvasEditor = () =>{
                 left, top,
                 originX: 'center',
                 originY: 'center',
-                evented:false,
-                selectable:false,
+                lockMovementX:true,
+                lockMovementY:true,
                 name: "question-mark",
+                hoverCursor: "pointer",
+                angle
             });
-            imgInstance.set("angle",angle)
-            imgInstance.scaleToHeight(40)
+            imgInstance.scaleToHeight(30)
             canvas.add(imgInstance);
+            canvas.bringToFront(imgInstance)
             canvas.setActiveObject(imgInstance);
             canvas.renderAll();
         };
-        img.src = questionMarkIcon;
+        img.src = questionMarkIcon1;
     }
     const mouseDown =(e)=>{
         if (!selectedShapeType) return;
@@ -339,6 +289,7 @@ const CanvasEditor = () =>{
         }
     }
     const mouseMove =(e)=>{
+        const obj = e.target;
         if (isAddingShape){
             const actObj = canvas.getObjects().find(o=>o.name === selectedShapeType && o.isAddingMode);
             if (actObj){
@@ -352,6 +303,16 @@ const CanvasEditor = () =>{
                 canvas.renderAll();
             }
         }
+        if (!obj) return;
+        if (obj.name === "square1" || obj.name === "square2"){
+            setZoomAreaImgSrc(canvas.toDataURL({
+                left: obj.left - obj.width,
+                top: obj.top - obj.height,
+                width: obj.width * 2,
+                height: obj.height  * 2
+            }));
+        }
+
     }
 
 
@@ -369,10 +330,9 @@ const CanvasEditor = () =>{
         let y2 = newY2;
         var angle = Math.atan2(y2 - y1, x2 - x1);
         let tempVal = Number.parseFloat(angle).toFixed(2);
-
         var line = new fabric.Line([x1, y1, x2, y2], {
             stroke: 'black',
-            strokeWidth: 3,
+            strokeWidth: 6,
             originX:'center',
             originY:'center',
             name: "arrow_line",
@@ -382,28 +342,38 @@ const CanvasEditor = () =>{
         });
 
 
-        x2 = setArrowAlignment(x2, y2, tempVal).x2;
-        y2 = setArrowAlignment(x2, y2, tempVal).y2;
-
+        x2 = setArrowAlignment(x2, y2, tempVal).x;
+        y2 = setArrowAlignment(x2, y2, tempVal).y;
+        const calcAngle = (angle * (180 / (3.142))) - 30;
         var arrow = new fabric.Triangle({
             left: x2,
             top: y2,
-            angle: (angle * (180 / (3.142))) - 30,
-            width: 15,
-            height: 15,
+            angle: calcAngle,
+            width: 18,
+            height: 18,
             originX:'center',
             originY:'center',
             fill: 'black',
             name: "arrow",
         });
-        const group = new fabric.Group([line,arrow], {
+        var arrow1 = new fabric.Triangle({
+            left: x1,
+            top: y1,
+            angle: calcAngle + 55,
+            width: 18,
+            height: 18,
+            originX:'center',
+            originY:'center',
+            fill: 'black',
+            name: "arrow1",
+        });
+        const group = new fabric.Group([line,arrow,arrow1], {
             name: "arrowLine",
             originX:'center',
             originY:'center',
             isAddingMode:true,
             ref_id: id,
         });
-
         canvas.add(group)
         canvas.renderAll();
     }
@@ -436,7 +406,6 @@ const CanvasEditor = () =>{
             left: props.left,
             top: props.top,
             name: "arrow_line",
-            isAddingMode:true,
             // perPixelTargetFind: true,
             objecttype: "arrow_line",
             custom:{
@@ -454,6 +423,27 @@ const CanvasEditor = () =>{
 
 
         var arrow = new fabric.Triangle({
+            left: line.get('x1') + deltaX,
+            top: line.get('y1') + deltaY,
+            originX: 'center',
+            originY: 'center',
+            hasBorders: false,
+            hasControls: false,
+            lockScalingX: true,
+            lockScalingY: true,
+            lockRotation: true,
+            selectable: false,
+            pointType: 'arrow_start',
+            angle: props.angle,
+            width: (props.scaleProps.height / 2) - 2,
+            height: (props.scaleProps.height / 2) - 2,
+            fill: props.color,
+            objecttype: "arrow_line",
+            name: "arrow",
+        });
+        arrow.line = line;
+
+        var arrow1 = new fabric.Triangle({
             left: line.get('x2') + deltaX,
             top: line.get('y2') + deltaY,
             originX: 'center',
@@ -472,27 +462,7 @@ const CanvasEditor = () =>{
             objecttype: "arrow_line",
             name: "arrow",
         });
-        arrow.line = line;
-        // var arrow1 = new fabric.Triangle({
-        //     left: line.get('x2') + deltaX,
-        //     top: line.get('y2') + deltaY,
-        //     originX: 'center',
-        //     originY: 'center',
-        //     hasBorders: false,
-        //     hasControls: false,
-        //     lockScalingX: true,
-        //     lockScalingY: true,
-        //     lockRotation: true,
-        //     selectable: false,
-        //     pointType: 'arrow_start',
-        //     angle: props.angle,
-        //     width: (props.scaleProps.height / 2) - 2,
-        //     height: (props.scaleProps.height / 2) - 2,
-        //     fill: props.color,
-        //     objecttype: "arrow_line",
-        //     name: "arrow",
-        // });
-        // arrow1.line = line;
+        arrow1.line = line;
         var square1 = new fabric.Circle({
             left: line.get('x2') + deltaX,
             top: line.get('y2') + deltaY,
@@ -540,36 +510,82 @@ const CanvasEditor = () =>{
         });
         setObjectPadding(square2, 5, 2)
         square2.line = line;
-        //
-        // line.ref_id = arrow.ref_id = arrow1.ref_id = square1.ref_id = square2.ref_id = id
-        // line.square1 = arrow.square1 = arrow1.square1 = square2.square1 = square1;
-        // line.square2 = arrow.square2 = arrow1.square2 = square1.square2 = square2;
-        // line.arrow = square1.arrow = square2.arrow = arrow;
-        // line.arrow1 = square1.arrow1 = square2.arrow1 = arrow1;
-        // canvas.add(line, arrow,arrow1, square1, square2);
-
-        line.ref_id = arrow.ref_id = square1.ref_id = square2.ref_id = id
+        line.ref_id = arrow.ref_id = arrow1.ref_id = square1.ref_id = square2.ref_id = id
         line.square1 = arrow.square1 = square2.square1 = square1;
         line.square2 = arrow.square2 = square1.square2 = square2;
+        arrow1.square1 = square1
+        arrow1.square2 = square2
         line.arrow = square1.arrow = square2.arrow = arrow;
-        canvas.add(line, arrow, square1, square2);
+        line.arrow1 = square1.arrow1 = square2.arrow1 = arrow1;
+        canvas.add(line, arrow ,arrow1, square1, square2);
         moveLine(line,canvas)
         moveEnd2(square1,canvas)
+        var angle = calcArrowAngle(line.x1, line.y1, line.x2, line.y2);
+        addQuestionMark(line.getCenterPoint(),angle,id)
         canvas.setActiveObject(line)
         canvas.renderAll()
     }
 
 
     const addShapeOnCanvas =(type)=>{
-        selectedShapeType = type
-        // const uuid = require("uuid");
-        // const id = uuid.v4();
-        // addArrow({color:"#33333",is_dashed:false,left:300,top:200,ref_id:id,scaleProps:{fontWeight:500,height:40.68,lineHeight:81.36, lineSelectorHeight:30.51,strokeWidth:4.0357,width:56.5,top:407}})
-
+        selectedShapeType = type;
+        setDrawBtnActive("drawBtnActive")
     }
     const handleUploadImage =(e)=>{
         const file = e.target.files[0]
         loadImageIntoCanvas(file)
+    }
+
+    const handleChangeDimension =(e)=>{
+        const val = e.target.value;
+        setDimensionInputText(val)
+    }
+    const updateDimensionText =(e,isCancel=false)=>{
+        if (isCancel){
+            setOpenDimensionPopup(false)
+            setDimensionInputText("")
+            return;
+        }
+        const val = `${dimensionInputText} ${selectedDimension}`;
+        const refID = selectedQMarkRefId;
+        const objs = canvas.getObjects();
+        const line = objs.find(o=>o.name === "arrow_line" && o.ref_id === refID)
+        const qMark = objs.find(o=>o.name === "question-mark" && o.ref_id === refID)
+        const text = objs.find(o=>o.name === "dimension-text" && o.ref_id === refID)
+        if ((qMark || text) && line){
+            const {x1,y1,x2,y2} = line;
+            const angle = calcArrowAngle(x1, y1, x2, y2);
+            if (qMark) {
+                canvas.remove(qMark);
+                addDimensionText(val, refID, line.getCenterPoint(), angle);
+            }else if(text){
+                text.set("text",val)
+            }
+            setOpenDimensionPopup(false)
+            canvas.renderAll();
+        }
+        canvas.renderAll();
+        setDimensionInputText(val)
+    }
+
+    const addDimensionText=(val,refId, {x,y},angle)=>{
+        let text = new fabric.Text(val,{
+            left:x,top:y,height: 150,width: 100,ref_id:refId,
+            name:"dimension-text",
+            originX:"center",
+            originY:"center",
+            backgroundColor:"white",
+            hoverCursor : "pointer",
+            fontSize:25,
+            angle,
+            lockMovementX:true,
+            lockMovementY:true,
+            // evented:false,
+            // selectable:false
+        })
+        canvas.add(text);
+        canvas.bringToFront(text)
+        canvas.renderAll();
     }
 
     const loadImageIntoCanvas =(file)=>{
@@ -579,7 +595,7 @@ const CanvasEditor = () =>{
             addImage(reader.result)
         };
     }
-    const addImage = (src,left,top) => {
+    const addImage = (src) => {
         const uuid = require("uuid");
         const id = uuid.v4();
         let img = new Image();
@@ -598,38 +614,52 @@ const CanvasEditor = () =>{
             });
 
             imgInstance.scaleToHeight(canvas.getHeight() * 0.8)
-
             canvas.add(imgInstance);
             canvas.setActiveObject(imgInstance);
             canvas.renderAll();
+            setZoomAreaImgSrc(canvas.toDataURL({
+                left: imgInstance.left - (imgInstance.width/2),
+                top: imgInstance.top - (imgInstance.height/2),
+                width: 300,
+                height: 300
+            }));
             setIsImageLoaded(true)
         };
         img.src = src;
     };
 
+    const changeDimensionSymbol=(dim)=>{
+        setSelectedDimension(dim)
+        setShowDropDownList(false)
+    }
+    const enableUploadHandler=(e)=>{
+        uploadImgInput.current.click();
+    }
+
     return (
         <div className="editor-main-wrapper">
-            <div className="canvas-main-wrapper">
-                <canvas id="canvas"/>
-            </div>
-            <div className="zoomin-arrow"/>
-            <ColorsPanel colors={colors} handleChangeColor={handleChangeColor}/>
-            <button className="drawBtn" onClick={()=>addShapeOnCanvas("arrowLine")}>Draw Arrow</button>
+            <div className="canvas-main-wrapper"><canvas id="canvas"/></div>
+            <ZoomInBox imageData={zoomAreaImgSrc || questionMarkIcon}/>
+            <ColorsPanel handleChangeColor={handleChangeColor}/>
+            <button className={`drawBtn ${drawBtnActive}`} onClick={()=>addShapeOnCanvas("arrowLine")}>DRAW ARROW</button>
             {
-                !isImageLoaded && 
-                // <div className="upload-img-popup content-center">
-                //     <span>UPLOAD IMAGE</span>
-                //     <input id="image-upload" type="file" onChange={handleUploadImage}/>
-                // </div>
-                <div className="upload-image-container upload-img-popup">
-                    <label className="upload-label">
-                    <div>
-                        <img src="/images/upload.png" alt="Upload Image" width="150px" />
+                !isImageLoaded && <div className="upload-img-popup content-center" onClick={enableUploadHandler}>
+                    <div className="upload-inner-wrapper">
+                        <img className="upload-img" src={uploadImg} alt="uploadImg"/>
+                        <span className="uploadImgText">UPLOAD IMAGE</span>
+                        <input ref={uploadImgInput} className="d-none" id="image-upload" type="file" onChange={handleUploadImage}/>
                     </div>
-                    Upload Image
-                    <input type="file" id="image-upload"  accept="image/*" onChange={handleUploadImage} />
-                    </label>
+
+
                 </div>
+            }
+            {openDimensionPopup && <DimChangePopup updateDimensionText={updateDimensionText}
+                changeDimensionSymbol={changeDimensionSymbol}
+                dimensionInputText={dimensionInputText}
+                handleChangeDimension={handleChangeDimension}
+                selectedDimension={selectedDimension}
+                setShowDropDownList={setShowDropDownList}
+                showDropDownList={showDropDownList}/>
             }
         </div>
     );
