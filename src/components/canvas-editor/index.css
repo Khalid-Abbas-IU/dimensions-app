@@ -76,27 +76,28 @@
     position: absolute;
     right: 20px;
     top: 0;
-    min-height: 400px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+    align-items: center;
+    max-height: 95%;
     width: 60px;
     border: 2px solid gray;
     border-radius: 4px;
-    margin: 0 5px;
-}
-.main-canvas-section{
+    margin: 10px 5px 0px 5px;
 }
 .drawBtn{
-    position: absolute;
-    bottom: 30px;
-    left: 15px;
     cursor: pointer;
     background-color: black;
     color: white;
-    width: 150px;
+    width: 8rem;
     border-radius: 4px;
-    height: 50px;
-    font-size: 1rem;
+    height: 3rem;
+    font-size: 0.8rem;
     border: 0;
     font-weight: lighter;
+    margin: 0 5px;
+
 }
 .customBtn{
     cursor: pointer;
@@ -122,6 +123,11 @@
     align-items: center;
     border: 8px dotted lightgray;
     padding: 26px;
+}
+.bottom-btns-wrapper{
+    position: absolute;
+    bottom: 30px;
+    left: 15px;
 }
 
 .uploadImgText{
@@ -235,4 +241,44 @@
 
 textarea:focus, input:focus{
     outline: none;
+}
+
+
+/*MEDIA QUERIES*/
+
+/* media queries */
+@media (max-width: 767px) {
+    .drawBtn{
+        width: 5rem;
+        height: 1.8rem;
+        font-size: 0.6rem;
+    }
+    .bottom-btns-wrapper{
+        bottom: 70px;
+        left: 5px;
+    }
+    .colors-container{
+        top: calc(100% - 75px);
+        bottom: 10px;
+        left: 5px;
+        flex-direction: row;
+        justify-content: space-evenly;
+        align-items: center;
+        height: 30px;
+        width: calc(100% - 23px);
+        border: 2px solid gray;
+        border-radius: 4px;
+        margin: 10px 5px 0px 5px;
+    }
+    .color-box{
+        height: 20px;
+        width: 30px;
+        border: 1px solid #8b8787;
+        border-radius: 50%;
+        cursor: pointer;
+        margin: 1px;
+    }
+    .upload-inner-wrapper{
+        width: 150px;
+    }
 }

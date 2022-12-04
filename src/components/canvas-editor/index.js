@@ -10,7 +10,7 @@ import ColorsPanel from "./colorsPanel";
 import DimChangePopup from "./DimensionChangePopup/DimChangePopup";
 import ZoomInBox from "./ZoomInBox/ZoomInBox";
 let canvas,selectedShapeType = '',isAddingShape = false,
-    initialPointers = {}, selectedQMarkRefId = "";
+    initialPointers = {}, selectedQMarkRefId = "", arrowWidth=18, arrowHeight = 15;
 const CanvasEditor = () =>{
 
     // Declare and initialize component states.
@@ -21,6 +21,7 @@ const CanvasEditor = () =>{
     const [selectedDimension, setSelectedDimension] = useState("cm")
     const [showDropDownList, setShowDropDownList] = useState(false)
     const [zoomAreaImgSrc, setZoomAreaImgSrc] = useState("")
+    const [isMobileView, setIsMobileView] = useState(false);
 
     const uploadImgInput = useRef();
 
@@ -28,6 +29,9 @@ const CanvasEditor = () =>{
     useEffect(() => {
         // Initialize canvas and set dimension.
         inItCanvas();
+        if (window.innerWidth < 1100 || isMobile()) {
+            setIsMobileView(true)
+        }
     },[]);
 
     const inItCanvas =()=>{
@@ -78,8 +82,70 @@ const CanvasEditor = () =>{
             'mouse:up':mouseUp,
             'mouse:down':mouseDown,
             'mouse:move':mouseMove,
+            "mouse:wheel" : onMouseWheel,
         })
     }
+    const deleteObject =()=>{
+        let obj = canvas.getActiveObject();
+        if (!obj) return;
+        const objs = canvas.getObjects();
+        const line = objs.find(o=>o.name === "arrow_line" && o.ref_id === obj.ref_id)
+        const qMark = objs.find(o=>(o.name === "question-mark" || o.name === "dimension-text") && o.ref_id === obj.ref_id )
+        canvas.remove(line.arrow)
+        canvas.remove(line.arrow1)
+        canvas.remove(line.square1)
+        canvas.remove(line.square2)
+        canvas.remove(line)
+        canvas.remove(qMark)
+        canvas.renderAll();
+        const bgImg = objs.find(o=>o.name === "bg-image");
+        if (bgImg) {
+            setZoomAreaImgSrc(canvas.toDataURL({
+                left: bgImg.left - bgImg.width,
+                top: bgImg.top - bgImg.height,
+                width: 300,
+                height: 300
+            }));
+        }
+    }
+
+// MOUSEWHEEL ZOOM
+    const onMouseWheel =(opt) => {
+        var delta = opt.e.deltaY;
+        var zoom = canvas.getZoom();
+        zoom *= 0.999 ** delta;
+        if (zoom > 20) zoom = 20;
+        if (zoom < 0.01) zoom = 0.01;
+        canvas.zoomToPoint({ x: opt.e.offsetX, y: opt.e.offsetY }, zoom);
+        opt.e.preventDefault();
+        opt.e.stopPropagation();
+        // var vpt = this.viewportTransform;
+        // if (zoom < 400 / 1000) {
+        //     vpt[4] = 200 - 1000 * zoom / 2;
+        //     vpt[5] = 200 - 1000 * zoom / 2;
+        // } else {
+        //     if (vpt[4] >= 0) {
+        //         vpt[4] = 0;
+        //     } else if (vpt[4] < canvas.getWidth() - 1000 * zoom) {
+        //         vpt[4] = canvas.getWidth() - 1000 * zoom;
+        //     }
+        //     if (vpt[5] >= 0) {
+        //         vpt[5] = 0;
+        //     } else if (vpt[5] < canvas.getHeight() - 1000 * zoom) {
+        //         vpt[5] = canvas.getHeight() - 1000 * zoom;
+        //     }
+        // }
+        canvas.renderAll();
+        canvas.calcOffset();
+
+        const objs = canvas.getObjects();
+        for (let i = 0; i < objs.length; i++) {
+            objs[i].setCoords();
+        }
+        canvas.renderAll();
+
+    }
+
     const added=()=>{}
     const objectModified=()=>{
         const actObj = canvas.getActiveObject();
@@ -192,25 +258,15 @@ const CanvasEditor = () =>{
     const handleChangeColor=(color)=>{
         const activeObject = canvas.getActiveObject();
         if (!activeObject) return;
-        if (activeObject.name === 'arrow_line') {
-            // const text = canvas.getObjects().find(o=>o.name === "dimension-text" && o.ref_id === refID)
-            activeObject.set({ stroke: color })
-            if (activeObject.arrow) {
-                activeObject.arrow.set({ fill: color })
-            }
-            if (activeObject.arrow1) {
-                activeObject.arrow1.set({ fill: color })
-            }
+        const objs = canvas.getObjects()
+        const line = objs.find(o=>o.name === "arrow_line" && o.ref_id === activeObject.ref_id)
+        const qMark = objs.find(o=>(o.name === "dimension-text") && o.ref_id === activeObject.ref_id)
+        line.set({ stroke: color })
+        if (line.arrow && line.arrow1) {
+            line.arrow.set({ fill: color })
+            line.arrow1.set({ fill: color })
         }
-        if (activeObject.name === 'square1' || activeObject.name === 'square2') {
-            activeObject.line.set({ stroke: color })
-            if (activeObject.arrow) {
-                activeObject.arrow.set({ fill: color })
-            }
-            if (activeObject.arrow1) {
-                activeObject.arrow1.set({ fill: color })
-            }
-        }
+        qMark && qMark.set({ fill: color })
         canvas.renderAll();
     }
     const mouseUp =(e)=>{
@@ -304,10 +360,11 @@ const CanvasEditor = () =>{
             }
         }
         if (!obj) return;
+        const {x,y} = e.pointer;
         if (obj.name === "square1" || obj.name === "square2"){
             setZoomAreaImgSrc(canvas.toDataURL({
-                left: obj.left - obj.width,
-                top: obj.top - obj.height,
+                left: x - obj.width,
+                top: y - obj.height,
                 width: obj.width * 2,
                 height: obj.height  * 2
             }));
@@ -349,8 +406,8 @@ const CanvasEditor = () =>{
             left: x2,
             top: y2,
             angle: calcAngle,
-            width: 18,
-            height: 18,
+            width: arrowWidth,
+            height: arrowHeight,
             originX:'center',
             originY:'center',
             fill: 'black',
@@ -359,9 +416,9 @@ const CanvasEditor = () =>{
         var arrow1 = new fabric.Triangle({
             left: x1,
             top: y1,
-            angle: calcAngle + 55,
-            width: 18,
-            height: 18,
+            angle: calcAngle + 62,
+            width: arrowWidth,
+            height: arrowHeight - 3,
             originX:'center',
             originY:'center',
             fill: 'black',
@@ -435,8 +492,8 @@ const CanvasEditor = () =>{
             selectable: false,
             pointType: 'arrow_start',
             angle: props.angle,
-            width: (props.scaleProps.height / 2) - 2,
-            height: (props.scaleProps.height / 2) - 2,
+            width: (props.scaleProps.height / 2) - 8,
+            height: (props.scaleProps.height / 2) - 4,
             fill: props.color,
             objecttype: "arrow_line",
             name: "arrow",
@@ -456,8 +513,8 @@ const CanvasEditor = () =>{
             selectable: false,
             pointType: 'arrow_start',
             angle: props.angle,
-            width: (props.scaleProps.height / 2) - 2,
-            height: (props.scaleProps.height / 2) - 2,
+            width: (props.scaleProps.height / 2) - 8,
+            height: (props.scaleProps.height / 2) - 4,
             fill: props.color,
             objecttype: "arrow_line",
             name: "arrow",
@@ -540,6 +597,7 @@ const CanvasEditor = () =>{
         const val = e.target.value;
         setDimensionInputText(val)
     }
+
     const updateDimensionText =(e,isCancel=false)=>{
         if (isCancel){
             setOpenDimensionPopup(false)
@@ -570,13 +628,13 @@ const CanvasEditor = () =>{
 
     const addDimensionText=(val,refId, {x,y},angle)=>{
         let text = new fabric.Text(val,{
-            left:x,top:y,height: 150,width: 100,ref_id:refId,
+            left:x,top:y,height: 10,width: 100,ref_id:refId,
             name:"dimension-text",
             originX:"center",
             originY:"center",
             backgroundColor:"white",
             hoverCursor : "pointer",
-            fontSize:25,
+            fontSize:18,
             angle,
             lockMovementX:true,
             lockMovementY:true,
@@ -612,10 +670,9 @@ const CanvasEditor = () =>{
                 selectable:false,
                 name: "bg-image",
             });
-
-            imgInstance.scaleToHeight(canvas.getHeight() * 0.8)
+            if (isMobileView) imgInstance.scaleToWidth(canvas.getWidth() * 0.95)
+            else imgInstance.scaleToHeight(canvas.getHeight() * 0.8)
             canvas.add(imgInstance);
-            canvas.setActiveObject(imgInstance);
             canvas.renderAll();
             setZoomAreaImgSrc(canvas.toDataURL({
                 left: imgInstance.left - (imgInstance.width/2),
@@ -635,13 +692,16 @@ const CanvasEditor = () =>{
     const enableUploadHandler=(e)=>{
         uploadImgInput.current.click();
     }
-
     return (
         <div className="editor-main-wrapper">
             <div className="canvas-main-wrapper"><canvas id="canvas"/></div>
             <ZoomInBox imageData={zoomAreaImgSrc || questionMarkIcon}/>
             <ColorsPanel handleChangeColor={handleChangeColor}/>
-            <button className={`drawBtn ${drawBtnActive}`} onClick={()=>addShapeOnCanvas("arrowLine")}>DRAW ARROW</button>
+            <div className="bottom-btns-wrapper">
+                <button className={`drawBtn ${drawBtnActive}`} onClick={()=>addShapeOnCanvas("arrowLine")}>DRAW ARROW</button>
+                <button className="drawBtn" onClick={deleteObject}>DELETE</button>
+            </div>
+
             {
                 !isImageLoaded && <div className="upload-img-popup content-center" onClick={enableUploadHandler}>
                     <div className="upload-inner-wrapper">
