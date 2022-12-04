@@ -21,4 +21,5 @@ function ColorsPanel ({handleChangeColor}){
         {colors.map((color,i) => <div key={i} className="color-box" onClick={()=>handleChangeColor(color.hex)} style={{backgroundColor:color.hex}}/>)}
     </div>
 }
+
 export default ColorsPanel;

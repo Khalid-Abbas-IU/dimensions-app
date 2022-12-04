@@ -714,12 +714,12 @@ const CanvasEditor = () =>{
                 </div>
             }
             {openDimensionPopup && <DimChangePopup updateDimensionText={updateDimensionText}
-                                                    changeDimensionSymbol={changeDimensionSymbol}
-                                                    dimensionInputText={dimensionInputText}
-                                                    handleChangeDimension={handleChangeDimension}
-                                                    selectedDimension={selectedDimension}
-                                                    setShowDropDownList={setShowDropDownList}
-                                                    showDropDownList={showDropDownList}/>
+                changeDimensionSymbol={changeDimensionSymbol}
+                dimensionInputText={dimensionInputText}
+                handleChangeDimension={handleChangeDimension}
+                selectedDimension={selectedDimension}
+                setShowDropDownList={setShowDropDownList}
+                showDropDownList={showDropDownList}/>
             }
         </div>
     );

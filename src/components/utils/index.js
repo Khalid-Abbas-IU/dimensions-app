@@ -167,20 +167,20 @@ export const transformedPoint = (target) => {
     const maxY = Math.max(...yArray);
     const minY = Math.min(...yArray);
     return points
-        .map(p => {
-                let pointX, pointY;
-                if (path[1][1] >= path[0][1]) {
-                    pointX = p.x - minX - (target.width / 2);
-                } else {
-                    pointX = p.x - maxX + (target.width / 2);
-                }
-                if (path[1][2] >= path[0][2]) {
-                    pointY = p.y - minY - (target.height / 2);
-                } else {
-                    pointY = p.y - maxY + (target.height / 2);
-                }
-                return new fabric.Point(pointX, pointY)
+    .map(p => {
+            let pointX, pointY;
+            if (path[1][1] >= path[0][1]) {
+                pointX = p.x - minX - (target.width / 2);
+            } else {
+                pointX = p.x - maxX + (target.width / 2);
             }
-        ).map(p => fabric.util.transformPoint(p, matrix));
+            if (path[1][2] >= path[0][2]) {
+                pointY = p.y - minY - (target.height / 2);
+            } else {
+                pointY = p.y - maxY + (target.height / 2);
+            }
+            return new fabric.Point(pointX, pointY)
+        }
+    ).map(p => fabric.util.transformPoint(p, matrix));
 }
 
