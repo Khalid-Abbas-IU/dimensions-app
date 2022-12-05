@@ -1,22 +1,44 @@
+.zoom-container{
+    position: absolute;
+    left: 10px;
+    top: 10px;
+    display: flex;
+}
+.zoom-in-out-btn-wrapper{
+    display: flex;
+}
 .zoomIn-box-img{
     height: 100%;
     width: 100%;
 }
+.zoomin-out-btn{
+    font-size: 1.2rem;
+    height: 35px;
+    width: 40px;
+    margin-left: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
 
 .zoomIn-box-wrapper{
-    position: absolute;
-    left: 10px;
-    top: 10px;
     /*z-index: 999;*/
     height: 200px;
     width: 250px;
     background: #a39b9b;
 }
 
+
 /* media queries */
 @media (max-width: 767px) {
     .zoomIn-box-wrapper{
         height: 120px;
         width: 120px;
+    }
+    .zoomin-out-btn{
+        font-size: 0.9rem;
+        height: 25px;
+        width: 30px;
+        margin-left: 5px;
     }
 }
