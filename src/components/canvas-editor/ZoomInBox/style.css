@@ -12,3 +12,11 @@
     width: 250px;
     background: #a39b9b;
 }
+
+/* media queries */
+@media (max-width: 767px) {
+    .zoomIn-box-wrapper{
+        height: 120px;
+        width: 120px;
+    }
+}

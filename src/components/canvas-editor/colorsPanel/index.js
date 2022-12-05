@@ -17,7 +17,7 @@ const colors=[
     {name:"Fuchsia"	, hex:"#FF00FF", rgb:"rgb(255, 0, 255)"},
     {name:"Purple"	, hex:"#800080", rgb: "rgb(128, 0, 128)"}]
 function ColorsPanel ({handleChangeColor}){
-    return <div className="colors-container flex-Col justify-evenly items-center mt-10">
+    return <div className="colors-container">
         {colors.map((color,i) => <div key={i} className="color-box" onClick={()=>handleChangeColor(color.hex)} style={{backgroundColor:color.hex}}/>)}
     </div>
 }
