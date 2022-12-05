@@ -637,7 +637,7 @@ const CanvasEditor = () =>{
     }
 
     return (
-        <div className="editor-main-wrapper">
+        <div className="editor-main-wrapper" style={{overflowX:"hidden"}}>
             <div className="canvas-main-wrapper"><canvas id="canvas"/></div>
             <ZoomInBox imageData={zoomAreaImgSrc || questionMarkIcon}/>
             <ColorsPanel handleChangeColor={handleChangeColor}/>
