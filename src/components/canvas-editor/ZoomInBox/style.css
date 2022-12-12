@@ -1,13 +1,17 @@
 .zoom-container{
     position: absolute;
-    left: 10px;
-    top: 10px;
+    left: 30px;
+    top: 50px;
     display: flex;
 }
 .zoom-in-out-btn-wrapper{
+    position: absolute;
+    top: 5px;
+    right: 5px;
     display: flex;
 }
 .zoomIn-box-img{
+    border-radius: 50%;
     height: 100%;
     width: 100%;
 }
@@ -23,17 +27,18 @@
 
 .zoomIn-box-wrapper{
     /*z-index: 999;*/
-    height: 200px;
-    width: 250px;
-    background: #a39b9b;
+    height: 150px;
+    width: 150px;
+    border-radius: 50%;
+    border: 5px solid white;
 }
 
 
 /* media queries */
 @media (max-width: 767px) {
     .zoomIn-box-wrapper{
-        height: 120px;
-        width: 120px;
+        height: 100px;
+        width: 100px;
     }
     .zoomin-out-btn{
         font-size: 0.9rem;

@@ -152,6 +152,30 @@ export const moveLine = (line, type) => {
         'top': (line.y1 + line.y2) / 2
     });
 }
+export const setCanvasBackgroundImage =(src,canvas,isMobileView=false) =>new Promise((resolve, reject)=>{
+    if (!canvas) return;
+    let img = new Image();
+    img.setAttribute('crossOrigin', 'anonymous');
+    img.onload = () => {
+        const center = canvas.getCenter();
+        let nsgImage = new fabric.Image(img);
+        nsgImage.set({
+            top: center.top,
+            left: center.left,
+            originX: 'center',
+            originY: 'center',
+        });
+        if (isMobileView) nsgImage.scaleToWidth(canvas.getWidth())
+        else nsgImage.scaleToHeight(canvas.getHeight())
+        canvas.setBackgroundImage(nsgImage,()=>{
+            canvas.renderAll.bind(canvas)
+            canvas.renderAll();
+            resolve()
+        });
+    }
+    img.src = src
+    img.error =function () {resolve()}
+});
 
 export const transformedPoint = (target) => {
     const points = [];
