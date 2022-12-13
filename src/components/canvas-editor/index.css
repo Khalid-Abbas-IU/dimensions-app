@@ -21,7 +21,7 @@
     left: 0;
     height: 30%;
     width: 100%;
-    background-color: #e7e8e9;
+    background-color: white;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -251,6 +251,19 @@
 }
 .popup-inner-wrapper{
     width: 100%;
+}
+.cross-dim-popup{
+    position: absolute;
+    top: 5px;
+    height: max-content;
+    width: max-content;
+    right: 15px;
+    font-size: 23px;
+    font-weight: bold;
+    padding: 0px 7px;
+    background-color: #d6d7da;
+    border-radius: 4px;
+    cursor: pointer;
 }
 .color-box-container{
     border: 0;
