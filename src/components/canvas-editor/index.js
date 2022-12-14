@@ -30,7 +30,6 @@ const CanvasEditor = () => {
     const [dimensionInputText, setDimensionInputText] = useState("")
     const [openDimensionPopup, setOpenDimensionPopup] = useState(false)
     const [isDimensionPopup, setIsDimensionPopup] = useState(false)
-    const [drawBtnActive, setDrawBtnActive] = useState("")
     const [selectedDimension, setSelectedDimension] = useState("cm")
     const [showDropDownList, setShowDropDownList] = useState(false)
     const [zoomAreaImgSrc, setZoomAreaImgSrc] = useState("")
@@ -219,6 +218,16 @@ const CanvasEditor = () => {
         updateArrowObject(actObj, "selected");
         setIsObjectSelected(true)
         updateValuesForSelected("",true)
+        // if (actObj.name === "square1" || actObj.name === "square2") {
+            // const {x, y} = canvas.getPointer(e.e, true), zoom = canvas.getZoom();
+            // setZoomAreaImgSrc(canvas.toDataURL({
+            //     left: x - (obj.width * zoom)/2,
+            //     top: y - (obj.height * zoom)/2,
+            //     width: obj.width * zoom,
+            //     height: obj.height * zoom
+            // }));
+            // setShowZoomBox(true)
+        // }
     }
     const updateValuesForSelected = (value="",isSelectedFirstTime=false) => {
         const actObj = canvas.getActiveObject();
@@ -260,6 +269,7 @@ const CanvasEditor = () => {
             canvas.remove(qMark);
             addDimensionText(value, refID, line);
         } else if (text) {
+            text.set("fill", line.stroke)
             text.set("text", value)
         }
         canvas.renderAll();
@@ -275,9 +285,16 @@ const CanvasEditor = () => {
                         obj.square1.selectable = true
                         obj.square2.selectable = true
                         obj.square1.hoverCursor = obj.square2.hoverCursor = "pointer"
-                        const qMarkInd = canvas._objects.findIndex((o) => o.ref_id === obj.ref_id && (o.name === "question-mark" || o.name === "dimension-text"));
-                        if (qMarkInd > -1) canvas.bringToFront(canvas._objects[qMarkInd])
+                        canvas.bringToFront(obj.square1)
+                        canvas.bringToFront(obj.square2)
                         canvas.renderAll();
+                        break;
+                    case "arrow":
+                        const line = canvas.getObjects().find(o => o.name === "arrow_line" && o.ref_id === obj.ref_id)
+                        if (line) {
+                            canvas.setActiveObject(line)
+                            canvas.renderAll()
+                        }
                         break;
                 }
                 break;
@@ -313,6 +330,7 @@ const CanvasEditor = () => {
         setOpenDeleteConfirmation(false)
         setShowZoomBox(false)
         setIsObjectSelected(false)
+        setDimensionInputText("")
         closeDimPopup()
 
     }
@@ -326,6 +344,9 @@ const CanvasEditor = () => {
                 obj.square1.selectable = false
                 obj.square2.selectable = false
                 obj.square1.hoverCursor = obj.square2.hoverCursor = "default"
+                canvas.sendToBack(obj.square1)
+                canvas.sendToBack(obj.square2)
+                canvas.renderAll()
             }
         }
         canvas.renderAll();
@@ -346,8 +367,6 @@ const CanvasEditor = () => {
     }
     const mouseUp = (e) => {
         isClickedOnCanvas = false
-        const o = e.target;
-        // if (!o && isObjectSelected) setIsObjectSelected(false)
         if (isAddingShape) {
             const objs = canvas.getObjects();
             const lineGroupInd = objs.findIndex(o => o.isAddingMode);
@@ -384,7 +403,6 @@ const CanvasEditor = () => {
         isAddingShape = false
         initialPointers = {}
         selectedShapeType = ''
-        setDrawBtnActive("")
         const obj = canvas.getActiveObject();
         if (obj) updateArrowObject(obj, "selected")
     }
@@ -401,10 +419,9 @@ const CanvasEditor = () => {
                 left, top:top + 15,
                 originX: 'center',
                 originY: 'center',
-                lockMovementX: true,
-                lockMovementY: true,
+                evented:false,
+                selectable:false,
                 name: "question-mark",
-                hoverCursor: "pointer",
                 angle
             });
             imgInstance.scaleToHeight(20)
@@ -415,6 +432,7 @@ const CanvasEditor = () => {
         img.src = questionMarkIcon1;
     }
     const mouseDown = (e) => {
+        if (isMobile()) return;
         isClickedOnCanvas = true
         if (!selectedShapeType) return;
         const {x, y} = canvas.getPointer(e.e, false);
@@ -591,7 +609,7 @@ const CanvasEditor = () => {
             lockScalingX: true,
             lockScalingY: true,
             lockRotation: true,
-            selectable: false,
+            // selectable: false,
             pointType: 'arrow_start',
             angle: props.angle,
             width: (props.scaleProps.height / 2) - 8,
@@ -612,7 +630,7 @@ const CanvasEditor = () => {
             lockScalingX: true,
             lockScalingY: true,
             lockRotation: true,
-            selectable: false,
+            // selectable: false,
             pointType: 'arrow_start',
             angle: props.angle,
             width: (props.scaleProps.height / 2) - 8,
@@ -710,18 +728,19 @@ const CanvasEditor = () => {
         const line = objs.find(o => o.name === "arrow_line" && o.ref_id === refID)
         const qMark = objs.find(o => o.name === "question-mark" && o.ref_id === refID)
         const text = objs.find(o => o.name === "dimension-text" && o.ref_id === refID)
+        const zoom  =canvas.getZoom()
         if (line){
             line.set({
                 stroke:lineProps.stroke,
-                strokeWidth:lineProps.strokeWidth
+                strokeWidth:lineProps.strokeWidth * zoom
             })
             line.arrow.set("fill", arrowProps.fill)
             line.arrow1.set("fill", arrowProps.fill)
-              line.arrow.scaleToWidth(arrowProps.scaledWidth * 1.6)
-            line.arrow1.scaleToWidth(arrowProps.scaledWidth * 1.6)
-            line.square1.scaleToWidth(squareProps.scaledWidth)
-            line.square2.scaleToWidth(squareProps.scaledWidth)
-            qMark && qMark.scaleToHeight(20)
+              line.arrow.scaleToWidth((arrowProps.scaledWidth * zoom) * 1.6)
+            line.arrow1.scaleToWidth((arrowProps.scaledWidth * zoom) * 1.6)
+            line.square1.scaleToWidth(squareProps.scaledWidth * zoom)
+            line.square2.scaleToWidth(squareProps.scaledWidth * zoom)
+            qMark && qMark.scaleToHeight(20 * zoom)
         }
         if (textProps){
             text.set({
@@ -739,9 +758,30 @@ const CanvasEditor = () => {
         setOpenDimensionPopup(false)
         objectOldValues={}
     }
-    const addShapeOnCanvas = (type) => {
-        selectedShapeType = type;
-        setDrawBtnActive("drawBtnActive")
+    const addShapeOnCanvas = (e,type) => {
+        if (isMobile()) {
+            const uuid = require("uuid");
+            const id = uuid.v4(),canvasZoom = canvas.getZoom();
+            let {x, y} = canvas.getCenterPoint()
+            x *= canvasZoom
+            y *= canvasZoom
+            const canHalf = (canvas.getWidth() / canvasZoom) / 2;
+            const lineWidth = canHalf * 0.015
+            addArrow({
+                color: "#33333",
+                is_dashed: false,
+                x1: x, y1: y, x2: x + (canHalf * 0.7), y2: y, id,
+                left:x,top:y,
+                scaleProps: {
+                    fontWeight: 500,
+                    height: 40 / canvasZoom,
+                    lineHeight: 81.36,
+                    lineSelectorHeight: 30.51,
+                    strokeWidth: 6 / canvasZoom,
+                    width: 56 / canvasZoom,
+                }
+            })
+        }else selectedShapeType = type;
     }
     const handleUploadImage = (e) => {
         const file = e.target.files[0]
@@ -764,6 +804,7 @@ const CanvasEditor = () => {
         let text = new fabric.Text(val, {
             left: x, top: y + 15, ref_id: refId,
             name: "dimension-text",
+            fill:line.stroke,
             originX: "center",
             originY: "center",
             // backgroundColor: "white",
@@ -914,7 +955,7 @@ const CanvasEditor = () => {
                         </div>
                     </> : <>
                         <div className="main-btn content-center">
-                            <img className="main-btn-img" src={plusIcon} height="35" width="35" alt="plus icon" onClick={() => addShapeOnCanvas("arrowLine")}/>
+                            <img className="main-btn-img" src={plusIcon} height="35" width="35" alt="plus icon" onClick={() => addShapeOnCanvas("","arrowLine")}/>
                             <span className="btn-span">Ajouter une flèche</span>
                         </div>
                         <div className="main-btn content-center">
