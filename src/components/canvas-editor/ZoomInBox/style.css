@@ -23,9 +23,13 @@
 
 .zoomIn-box-wrapper{
     /*z-index: 999;*/
-    height: 200px;
-    width: 250px;
     background: #a39b9b;
+    border-radius:50%;
+    width:150px;
+    height:150px;
+    overflow:hidden;
+    border:6px solid #fff;
+    box-shadow: 0px 0px 12px rgb(0 0 0 / 40%);
 }
 
 

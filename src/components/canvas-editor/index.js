@@ -747,8 +747,8 @@ const CanvasEditor = () => {
             <ZoomInBox zoomIn={zoomIn} zoomOut={zoomOut} imageData={zoomAreaImgSrc || questionMarkIcon}/>
             <ColorsPanel handleChangeColor={handleChangeColor}/>
             <div className="bottom-btns-wrapper">
-                <button className={`drawBtn ${drawBtnActive}`} onClick={() => addShapeOnCanvas("arrowLine")}>DRAW
-                    ARROW
+                <button className={`drawBtn ${drawBtnActive}`} onClick={() => addShapeOnCanvas("arrowLine")}>
+                    DRAW ARROW
                 </button>
                 <button className="drawBtn" onClick={handleDeleteObject}>DELETE</button>
             </div>
@@ -759,20 +759,18 @@ const CanvasEditor = () => {
                         <img className="upload-img" src={uploadImg} alt="uploadImg"/>
                         <span className="uploadImgText">UPLOAD IMAGE</span>
                         <input ref={uploadImgInput} className="d-none" id="image-upload" type="file"
-                               onChange={handleUploadImage}/>
+                        onChange={handleUploadImage}/>
                     </div>
-
-
                 </div>
             }
             {openDeleteConfirmation && <DeleteConfirmPopup handleClick={confirmDeleteObject}/>}
             {openDimensionPopup && <DimChangePopup updateDimensionText={updateDimensionText}
-                                                   changeDimensionSymbol={changeDimensionSymbol}
-                                                   dimensionInputText={dimensionInputText}
-                                                   handleChangeDimension={handleChangeDimension}
-                                                   selectedDimension={selectedDimension}
-                                                   setShowDropDownList={setShowDropDownList}
-                                                   showDropDownList={showDropDownList}/>
+                changeDimensionSymbol={changeDimensionSymbol}
+                dimensionInputText={dimensionInputText}
+                handleChangeDimension={handleChangeDimension}
+                selectedDimension={selectedDimension}
+                setShowDropDownList={setShowDropDownList}
+                showDropDownList={showDropDownList}/>
             }
         </div>
     );
