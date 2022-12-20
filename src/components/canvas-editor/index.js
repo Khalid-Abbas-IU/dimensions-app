@@ -1016,8 +1016,6 @@ const CanvasEditor = () => {
                         <input ref={uploadImgInput} className="d-none" id="image-upload" type="file" accept=".png, .jpg, .jpeg"
                                onChange={handleUploadImage}/>
                     </div>
-
-
                 </div>
             }
             {openDeleteConfirmation && <DeleteConfirmPopup handleClick={confirmDeleteObject}/>}
