@@ -1,5 +1,6 @@
-import {fabric} from 'fabric';
+// import {fabric} from 'fabric';
 
+const fabric = window.fabric;
 export const setArrowAlignment = (x, y, tempVal) => {
     if (tempVal === -1.57) {
         // 90 degrees

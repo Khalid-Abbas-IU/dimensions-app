@@ -1,8 +1,9 @@
-import {fabric} from "fabric";
+
+// import {fabric} from "fabric";
 
 // Override Functions
 
-fabric.Object.prototype.set({
+window.fabric?.Object.prototype.set({
     // borderColor: '#9eba1b',
     cornerColor: '#333333',
     borderColor: '#333333',

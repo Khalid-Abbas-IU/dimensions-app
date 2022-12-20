@@ -1,13 +1,11 @@
 import React, {useEffect, useRef, useState} from "react";
-import {fabric} from 'fabric';
+// import {fabric} from 'fabric';
 import '../fabric-overrids'
 import './index.css'
 import {calcArrowAngle, moveEnd, moveEnd2, moveLine, setArrowAlignment, setCanvasBackgroundImage} from "../utils";
 import questionMarkIcon from "../../assets/question-mark.png"
 import uploadImg from "../../assets/Upload-img.png"
 import questionMarkIcon1 from "../../assets/question-mark-icon.png"
-import ColorsPanel from "./colorsPanel";
-import DimChangePopup from "./DimensionChangePopup/DimChangePopup";
 import ZoomInBox from "./ZoomInBox/ZoomInBox";
 import DeleteConfirmPopup from "./DeleteConfirmPopup/DeleteConfirmPopup";
 import plusIcon from "../../assets/plus-5-128.png"
@@ -18,13 +16,15 @@ import editIcon from "../../assets/edit-2-128.png"
 import tickIcon from "../../assets/checkmark-128.png"
 import Button from "../common/Button";
 import SideZooms from "./SideZooms/SideZooms";
-import Input from "../common/Input";
-import DimDropDown from "./DimensionDropDown/DimDropDown";
 import UpdateDimPopup from "./UpdateDimPopup/UpdateDimPopup";
-let canvas,selectedShapeType = '',isAddingShape = false, objectOldValues = {},
-    initialPointers = {}, selectedQMarkRefId = "", arrowWidth=18, arrowHeight = 15,isClickedOnCanvas=false;
-const CanvasEditor = () => {
+let canvas,selectedShapeType = '',isAddingShape = false,
+    isDragMode = false,
+    zoomStartScale = 1,
+    objectOldValues = {},
+    initialPointers = {}, arrowWidth=18, arrowHeight = 15,isClickedOnCanvas=false;
 
+let fabric = window.fabric;
+const CanvasEditor = () => {
     // Declare and initialize component states.
     const [isImageLoaded, setIsImageLoaded] = useState(false)
     const [dimensionInputText, setDimensionInputText] = useState("")
@@ -40,6 +40,7 @@ const CanvasEditor = () => {
     const [showZoomBox,setShowZoomBox] = useState(false);
     const [currentFontSize,setCurrentFontSize] = useState(18);
     const [currentThickness,setCurrentThickness] = useState(18);
+    const [testingText,setTestingText] = useState("test");
 
     const uploadImgInput = useRef();
 
@@ -103,6 +104,7 @@ const CanvasEditor = () => {
             'mouse:down': mouseDown,
             'mouse:move': mouseMove,
             "mouse:wheel": onMouseWheel,
+            'touch:gesture': gesture,
         });
     }
     function unSubscribeEvents(canvas) {
@@ -120,8 +122,23 @@ const CanvasEditor = () => {
             'mouse:down': mouseDown,
             'mouse:move': mouseMove,
             "mouse:wheel": onMouseWheel,
+            'touch:gesture': gesture,
+
         });
         canvas.__eventListeners = null
+    }
+
+    const gesture =(e, se) => {
+        if (e.e.touches && e.e.touches.length == 2) {
+            // isDragMode = isDragMode && false;
+            // let point = new fabric.Point(e.self.x, e.self.y);
+            // if (e.self.state == "start") {
+            //     zoomStartScale = canvas.getZoom();
+            // }
+            // let delta = zoomStartScale * e.self.scale;
+            // canvas.zoomToPoint(point, delta);
+        }
+
     }
 
     const deleteObject = (obj) => {
@@ -143,8 +160,7 @@ const CanvasEditor = () => {
             height: 300
         }));
     }
-
-// MOUSEWHEEL ZOOM
+    // MOUSEWHEEL ZOOM
     const onMouseWheel = (opt) => {
         var delta = opt.e.deltaY;
         var zoom = canvas.getZoom();
@@ -236,7 +252,6 @@ const CanvasEditor = () => {
 
     }
     const updateValuesForSelected = (value="",isSelectedFirstTime=false) => {
-        debugger;
         const actObj = canvas.getActiveObject();
         if (!actObj) return;
         const refID = actObj.ref_id;
@@ -371,6 +386,7 @@ const CanvasEditor = () => {
     }
     const mouseUp = (e) => {
         isClickedOnCanvas = false
+        isDragMode = !isDragMode;
         if (isAddingShape) {
             const objs = canvas.getObjects();
             const lineGroupInd = objs.findIndex(o => o.isAddingMode);
@@ -456,6 +472,7 @@ const CanvasEditor = () => {
     }
     const panningCanvas =(e)=>{
         const obj = e.target;
+        console.log("isClickedOnCanvas",isClickedOnCanvas)
         if (!isClickedOnCanvas || obj) return;
         var units = 10;
         var delta = new fabric.Point(e.e.movementX, e.e.movementY);
@@ -478,6 +495,7 @@ const CanvasEditor = () => {
         }
     }
     const mouseMove = (e) => {
+        isDragMode = true;
         const obj = e.target;
         if (!obj) setShowZoomBox(false)
         if (obj?.name === "square1" || obj?.name === "square2") {
